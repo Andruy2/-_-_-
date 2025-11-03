@@ -1,0 +1,51 @@
+student@Ubuntu-MySQL-VirtualBox:~$ echo "Hello world!" > myfile.txt
+student@Ubuntu-MySQL-VirtualBox:~$ ls
+examples.desktop  Видео      Загрузки     Музыка         Рабочий стол
+myfile.txt        Документы  Изображения  Общедоступные  Шаблоны
+student@Ubuntu-MySQL-VirtualBox:~$ cat /etc/* 2> errors.txt
+student@Ubuntu-MySQL-VirtualBox:~$ ls -l /etc | cut -d ' ' -f 1 | sort | uniq
+drwxr-s---
+drwxr-xr-x
+lrwxrwxrwx
+-r--r-----
+-r--r--r--
+-rw-------
+-rw-r-----
+-rw-r--r--
+-rw-rw-r--
+-rwxr-xr-x
+итого
+student@Ubuntu-MySQL-VirtualBox:~$ sudo nano /etc/ssh/sshd_config
+[sudo] пароль для student: 
+student@Ubuntu-MySQL-VirtualBox:~$ ls -1 /etc/ssh
+moduli
+ssh_config
+sshd_config
+sshd_config.save
+ssh_host_dsa_key
+ssh_host_dsa_key.pub
+ssh_host_ecdsa_key
+ssh_host_ecdsa_key.pub
+ssh_host_ed25519_key
+ssh_host_ed25519_key.pub
+ssh_host_rsa_key
+ssh_host_rsa_key.pub
+ssh_import_id
+student@Ubuntu-MySQL-VirtualBox:~$ sudo systemctl restart sshd
+student@Ubuntu-MySQL-VirtualBox:~$ sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+student@Ubuntu-MySQL-VirtualBox:~$ sudo systemctl reload sshd
+restart - полностью останавливает и заново запускает службу
+
+reload - перечитывает конфигурационные файлы без остановки службы
+student@Ubuntu-MySQL-VirtualBox:~$ cat > textfile.txt
+Hello world!
+
+Сигнал Ctrl+D - это не сигнал процессу, а признак конца файла (EOF - End Of File).
+student@Ubuntu-MySQL-VirtualBox:~$ mc
+student@Ubuntu-MySQL-VirtualBox:~$ ps aux | grep mc
+student   2567  0.0  0.3  69120  7996 pts/4    S+   16:36   0:00 mc
+student   2600  0.0  0.0  21316  1016 pts/18   S+   16:36   0:00 grep --color=auto mc
+student@Ubuntu-MySQL-VirtualBox:~$ pgrep mc
+2567
+student@Ubuntu-MySQL-VirtualBox:~$ pgrep mc
+
