@@ -1,0 +1,180 @@
+Задание 1:
+student@Ubuntu-MySQL-VirtualBox:~$ mkdir lab8_ipc
+student@Ubuntu-MySQL-VirtualBox:~$ cd lab8_ipc
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ pwd
+/home/student/lab8_ipc
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ nano writer.c
+код внутри writer.c:
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
+int main() {
+    int fd;
+    char *message = "Hello from writer process!\n";
+    
+    // Открываем канал для записи
+    fd = open("my_pipe", O_WRONLY);
+    if (fd == -1) {
+        perror("open");
+        exit(1);
+    }
+    
+    // Записываем сообщение
+    write(fd, message, strlen(message));
+    close(fd);
+    
+    return 0;
+}
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ nano reader.c
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ mkfifo my_pipe
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ls -l my_pipe
+prw-rw-r-- 1 student student 0 ноя 19 18:32 my_pipe
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ./reader &
+[1] 2848
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ./writer
+Received: Hello from writer process!
+[1]+  Готово            ./reader
+при вызове reader со второго терминала:
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ./reader &
+[1] 4775
+
+Задание 2:
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ kill -l
+ 1) SIGHUP	 2) SIGINT	 3) SIGQUIT	 4) SIGILL	 5) SIGTRAP
+ 6) SIGABRT	 7) SIGBUS	 8) SIGFPE	 9) SIGKILL	10) SIGUSR1
+11) SIGSEGV	12) SIGUSR2	13) SIGPIPE	14) SIGALRM	15) SIGTERM
+16) SIGSTKFLT	17) SIGCHLD	18) SIGCONT	19) SIGSTOP	20) SIGTSTP
+21) SIGTTIN	22) SIGTTOU	23) SIGURG	24) SIGXCPU	25) SIGXFSZ
+26) SIGVTALRM	27) SIGPROF	28) SIGWINCH	29) SIGIO	30) SIGPWR
+31) SIGSYS	34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
+38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
+43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
+48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
+53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
+58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
+63) SIGRTMAX-1	64) SIGRTMAX	
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ nano signal_handler.c
+код в signal_handler:
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/stat.h>
+
+void signal_handler(int sig) {
+    printf("\nReceived signal: %d\n", sig);
+    
+    if (sig == SIGTERM || sig == SIGINT) {
+        printf("Cleaning up named pipe...\n");
+        unlink("my_pipe");
+        printf("Exiting...\n");
+        exit(0);
+    }
+}
+
+int main() {
+    // Создаем именованный канал
+    mkfifo("my_pipe", 0666);
+    
+    // Устанавливаем обработчики сигналов
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    
+    printf("Process PID: %d\n", getpid());
+    printf("Named pipe created. Waiting for signals...\n");
+    
+    // Бесконечный цикл ожидания
+    while(1) {
+        sleep(1);
+    }
+    
+    return 0;
+}
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ gcc -o signal_handler signal_handler.c
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ./signal_handler
+Process PID: 4621
+Named pipe created. Waiting for signals...
+Press Ctrl+C to send SIGINT or use 'kill -TERM PID' from another terminal
+
+Received signal: 15
+Cleaning up named pipe...
+Exiting...
+(команды в другом терминале: cd /путь/к/lab8_ipc
+
+# 17. Отправляем сигнал (замените 1234 на реальный PID)
+kill -TERM 1234
+
+# 18. Или отправляем SIGINT (эквивалент Ctrl+C)
+kill -INT 1234)
+Задание 3:
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ nano pipe_example.c
+код в pipe_example.c:
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/wait.h>
+
+int main() {
+    int pipefd[2];
+    pid_t pid;
+    char buffer[100];
+    
+    // Создаем pipe
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        exit(1);
+    }
+    
+    // Создаем дочерний процесс
+    pid = fork();
+    
+    if (pid == -1) {
+        perror("fork");
+        exit(1);
+    }
+    
+    if (pid == 0) {
+        // Дочерний процесс - писатель
+        close(pipefd[0]); // Закрываем конец для чтения
+        
+        char *message = "Hello from child process!";
+        write(pipefd[1], message, strlen(message));
+        close(pipefd[1]);
+        
+        exit(0);
+    } else {
+        // Родительский процесс - читатель
+        close(pipefd[1]); // Закрываем конец для записи
+        
+        int bytes_read = read(pipefd[0], buffer, sizeof(buffer)-1);
+        if (bytes_read > 0) {
+            buffer[bytes_read] = '\0';
+            printf("Parent received: %s\n", buffer);
+        }
+        
+        close(pipefd[0]);
+        wait(NULL); // Ждем завершения дочернего процесса
+    }
+    
+    return 0;
+}
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ gcc -o pipe_example pipe_example.c
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ./pipe_example
+Parent received: Hello from child process!
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ echo "This is a test message" | wc -w
+5
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ps aux | grep "pipe" | wc -l
+1
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ls -la | head -10 | tail -5
+-rwxrwxr-x  1 student student 8920 ноя 19 18:29 reader
+-rw-rw-r--  1 student student  535 ноя 19 18:29 reader.c
+-rwxrwxr-x  1 student student 9016 ноя 19 18:43 signal_handler
+-rw-rw-r--  1 student student  927 ноя 19 18:43 signal_handler.c
+-rwxrwxr-x  1 student student 8864 ноя 19 18:29 writer
+student@Ubuntu-MySQL-VirtualBox:~/lab8_ipc$ ps aux | grep "bash" | awk '{print $2}'
+2567
+4675
