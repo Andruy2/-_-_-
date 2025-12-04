@@ -1,0 +1,2 @@
+dstat -ta --top-cpu --top-mem --top-io 2 10  //dstat
+
